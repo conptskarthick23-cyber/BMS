@@ -1,0 +1,34 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="glow-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6" />
+      <stop offset="1" stop-color="#8B5CF6" />
+    </linearGradient>
+    <linearGradient id="battery-gradient" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22C55E" />
+      <stop offset="1" stop-color="#10B981" />
+    </linearGradient>
+    <filter id="glow" x="-4" y="-4" width="48" height="48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+      <feGaussianBlur stdDeviation="3" result="effect1_foregroundBlur" />
+    </filter>
+  </defs>
+
+  <!-- Outer Ring with Gradient Glow -->
+  <rect x="2" y="2" width="36" height="36" rx="10" stroke="url(#glow-gradient)" stroke-width="2.5" fill="#0A0A0B" />
+  
+  <!-- Subtle Background Glow -->
+  <rect x="2" y="2" width="36" height="36" rx="10" stroke="url(#glow-gradient)" stroke-width="2.5" opacity="0.4" filter="url(#glow)" />
+
+  <!-- Inner Battery Icon Shape -->
+  <rect x="10" y="14" width="18" height="12" rx="2" stroke="#E2E8F0" stroke-width="2" fill="none" />
+  <path d="M29 17.5C30.1046 17.5 31 18.3954 31 19.5V20.5C31 21.6046 30.1046 22.5 29 22.5V17.5Z" fill="#E2E8F0" />
+  
+  <!-- "Full" Battery Progress Fill -->
+  <rect x="12" y="16" width="10" height="8" rx="1" fill="url(#battery-gradient)" />
+  
+  <!-- Lightning Bolt -->
+  <path d="M19.5 8.5L14 19H19L18.5 31.5L25.5 19H20L19.5 8.5Z" fill="#F59E0B" filter="url(#glow)" />
+  <path d="M19.5 8.5L14 19H19L18.5 31.5L25.5 19H20L19.5 8.5Z" fill="#FCD34D" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="0.5" />
+</svg>
