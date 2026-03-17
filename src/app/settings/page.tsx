@@ -217,14 +217,6 @@ export default function SettingsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Database URL</Label>
-                  <Input
-                    value={process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || ''}
-                    readOnly
-                    className="bg-muted/50"
-                  />
-                </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <Wifi
@@ -382,8 +374,8 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            {/* PWA Install */}
-            <Card className="bg-muted/30">
+            {/* PWA Install — desktop only */}
+            <Card className="bg-muted/30 hidden md:block">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -392,10 +384,29 @@ export default function SettingsPage() {
                       Install as App
                     </p>
                     <p>
-                      On mobile, use your browser's "Add to Home Screen" option to
+                      Open{' '}
+                      <a
+                        href="https://bms-one-sandy.vercel.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                      >
+                        https://bms-one-sandy.vercel.app/
+                      </a>{' '}
+                      in your browser, then use "Add to Home Screen" option to
                       install this dashboard as a standalone app for quick access.
                     </p>
                   </div>
+                  <a
+                    href="https://bms-one-sandy.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Open App
+                    </Button>
+                  </a>
                 </div>
               </CardContent>
             </Card>

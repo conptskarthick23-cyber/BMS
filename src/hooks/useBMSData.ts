@@ -183,19 +183,35 @@ export function useBMSData() {
           if (alertSoundEnabled && typeof window !== 'undefined') {
             try {
               const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+              // Resume suspended context (browsers require user interaction first)
+              if (ctx.state === 'suspended') {
+                ctx.resume();
+              }
               const beepCount = alert.level === 'critical' ? 3 : 2;
+              const freq = alert.level === 'critical' ? 880 : 660;
+              const totalDuration = (beepCount - 1) * 0.3 + 0.2;
+
               for (let i = 0; i < beepCount; i++) {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-                osc.frequency.value = alert.level === 'critical' ? 880 : 660;
+                osc.frequency.value = freq;
                 osc.type = 'sine';
-                gain.gain.value = 0.3;
-                const start = ctx.currentTime + i * 0.25;
+
+                const start = ctx.currentTime + i * 0.3;
+                // Smooth envelope to avoid audio clicks
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(0.4, start + 0.02);
+                gain.gain.setValueAtTime(0.4, start + 0.15);
+                gain.gain.linearRampToValueAtTime(0, start + 0.2);
+
                 osc.start(start);
-                osc.stop(start + 0.15);
+                osc.stop(start + 0.2);
               }
+
+              // Close context after playback to free resources
+              setTimeout(() => { ctx.close().catch(() => {}); }, (totalDuration + 0.5) * 1000);
             } catch { /* audio not available */ }
           }
 
