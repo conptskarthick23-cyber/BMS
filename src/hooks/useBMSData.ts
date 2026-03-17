@@ -83,12 +83,13 @@ function parseHistorySnapshot(
   return Object.entries(rawHistory)
     .map(([key, raw]) => {
       const recordedAt = Number(raw.recordedAt ?? key ?? Date.now());
-      const voltage = Number(raw.Voltage ?? 0);
-      const current = Number(raw.Current ?? 0);
-      const power = Number(raw.Power ?? 0);
-      const temperature = Number(raw.Temperature ?? 0);
-      const batteryPercent = Number(raw.BatteryPercent ?? 0);
-      const status = normalizeStatus(raw.Status, current);
+      // Support both ESP32 snake_case and legacy PascalCase field names
+      const voltage = Number((raw as any).voltage_V ?? raw.Voltage ?? 0);
+      const current = Number((raw as any).current_A ?? raw.Current ?? 0);
+      const power = Number((raw as any).power_W ?? raw.Power ?? 0);
+      const temperature = Number((raw as any).batt_temp_C ?? raw.Temperature ?? 0);
+      const batteryPercent = Number((raw as any).batt_pct ?? raw.BatteryPercent ?? 0);
+      const status = normalizeStatus(raw.Status ?? (raw as any).volt_condition, current);
 
       const normalizedLiveData: BMSLiveData = {
         Voltage: voltage,
@@ -98,6 +99,9 @@ function parseHistorySnapshot(
         BatteryPercent: batteryPercent,
         Status: status,
         timestamp: recordedAt,
+        kmLeft: Number((raw as any).km_left ?? 0),
+        energyLeftWh: Number((raw as any).energy_left_Wh ?? 0),
+        uptimeSeconds: Number((raw as any).uptime_s ?? 0),
       };
 
       const hasHealthScore = typeof raw.healthScore === 'number';
@@ -149,7 +153,7 @@ export function useBMSData() {
           addAlertHistory(alert);
 
           // --- Trigger External Notifications ---
-          const { whatsappAlerts, emailAlerts } = useBMSStore.getState();
+          const { whatsappAlerts, emailAlerts, alertSoundEnabled, browserNotificationsEnabled } = useBMSStore.getState();
           const title = `🚨 BMS Alert: ${alert.alertId}`;
           const message = `Threshold exceeded: ${alert.alertName} is ${alert.value} (Limit: ${alert.threshold})`;
 
@@ -171,8 +175,35 @@ export function useBMSData() {
                 emailAlerts.userEmail,
                 title,
                 message
-              );
-            });
+              ).catch(() => { /* background notification — silently ignore */ });
+            }).catch(() => { /* silently ignore import errors */ });
+          }
+
+          // Alert Sound (Web Audio API — no sound file needed)
+          if (alertSoundEnabled && typeof window !== 'undefined') {
+            try {
+              const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+              const beepCount = alert.level === 'critical' ? 3 : 2;
+              for (let i = 0; i < beepCount; i++) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = alert.level === 'critical' ? 880 : 660;
+                osc.type = 'sine';
+                gain.gain.value = 0.3;
+                const start = ctx.currentTime + i * 0.25;
+                osc.start(start);
+                osc.stop(start + 0.15);
+              }
+            } catch { /* audio not available */ }
+          }
+
+          // Browser Desktop Notification
+          if (browserNotificationsEnabled && typeof window !== 'undefined') {
+            import('@/utils/notifications').then(({ sendBrowserNotification }) => {
+              sendBrowserNotification(title, message);
+            }).catch(() => { /* silently ignore */ });
           }
           // ------------------------------------
         }
@@ -203,7 +234,7 @@ export function useBMSData() {
     lastHistoryWrite.current = now;
 
     const calculations = calculateAll(data, profile);
-    const historyRef = ref(database, `BMS_12V_history/${now}`);
+    const historyRef = ref(database, `scooter/history/${now}`);
 
     set(historyRef, {
       ...data,
@@ -246,10 +277,10 @@ export function useBMSData() {
   );
 
   useEffect(() => {
-    const liveDataRef = ref(database, 'BMS_12V');
+    const liveDataRef = ref(database, 'scooter/live');
     const connectedRef = ref(database, '.info/connected');
     const historyQuery = query(
-      ref(database, 'BMS_12V_history'),
+      ref(database, 'scooter/history'),
       orderByKey(),
       limitToLast(HISTORY_SYNC_LIMIT)
     );
@@ -270,15 +301,22 @@ export function useBMSData() {
       if (!data) return;
 
       const now = Date.now();
-      const current = Number(data.Current ?? 0);
+      // Map ESP32 snake_case fields to dashboard PascalCase fields
+      const current = Number(data.current_A ?? data.Current ?? 0);
+      const voltCondition = data.volt_condition ?? data.Status ?? '';
       const bmsData: BMSLiveData = {
-        Voltage: Number(data.Voltage ?? 0),
+        Voltage: Number(data.voltage_V ?? data.Voltage ?? 0),
         Current: current,
-        Power: Number(data.Power ?? 0),
-        Temperature: Number(data.Temperature ?? 0),
-        BatteryPercent: Number(data.BatteryPercent ?? 0),
-        Status: normalizeStatus(data.Status, current),
+        Power: Number(data.power_W ?? data.Power ?? 0),
+        Temperature: Number(data.batt_temp_C ?? data.Temperature ?? 0),
+        BatteryPercent: Number(data.batt_pct ?? data.BatteryPercent ?? 0),
+        Status: normalizeStatus(voltCondition, current),
         timestamp: now,
+        kmLeft: Number(data.km_left ?? 0),
+        energyLeftWh: Number(data.energy_left_Wh ?? 0),
+        uptimeSeconds: Number(data.uptime_s ?? 0),
+        voltCondition: data.volt_condition as BMSLiveData['voltCondition'],
+        lowVoltage: Boolean(data.low_voltage ?? false),
       };
 
       // ── Sync real IoT device profile fields from Firebase into vehicleProfile ──

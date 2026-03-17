@@ -8,15 +8,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Sanitize phone number: remove spaces, dashes, parentheses — keep only digits and leading +
-    const cleanPhone = phone.replace(/[\s\-()]/g, '');
+    // Sanitize phone number: keep only digits and leading +
+    const cleanPhone = phone.toString().trim().replace(/[^\d+]/g, '');
+
+    // Trim the API key — any whitespace causes CallMeBot to reject it
+    const cleanApiKey = apikey.toString().trim();
 
     const encodedMessage = encodeURIComponent(message);
 
-    // Use CallMeBot WhatsApp API (free, reliable)
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(cleanPhone)}&text=${encodedMessage}&apikey=${encodeURIComponent(apikey)}`;
+    // CallMeBot expects phone and apikey as plain values (NOT URL-encoded)
+    // Only the message text needs encoding
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodedMessage}&apikey=${cleanApiKey}`;
 
-    console.log('[WhatsApp API] Sending to:', cleanPhone);
+    console.log('[WhatsApp API] Sending to:', cleanPhone, '| apikey length:', cleanApiKey.length);
+    console.log('[WhatsApp API] Full URL:', url);
 
     const response = await fetch(url, {
       method: 'GET',

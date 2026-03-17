@@ -7,6 +7,12 @@ export interface BMSLiveData {
   BatteryPercent: number;
   Status: 'CONNECTED' | 'DISCONNECTED' | 'CHARGING' | 'DISCHARGING';
   timestamp?: number;
+  // ESP32 extra fields from /scooter/live
+  kmLeft?: number;
+  energyLeftWh?: number;
+  uptimeSeconds?: number;
+  voltCondition?: 'FULL' | 'MED' | 'LOW';
+  lowVoltage?: boolean;
 }
 
 export interface BMSHistoryEntry extends BMSLiveData {

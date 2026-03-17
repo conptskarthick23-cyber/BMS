@@ -36,6 +36,8 @@ import { useBMSStore } from '@/hooks/useBMSStore';
 import { useBMSData } from '@/hooks/useBMSData';
 import { useShallow } from 'zustand/react/shallow';
 import { exportToPDF } from '@/utils/pdfExport';
+import { ref, remove } from 'firebase/database';
+import { database } from '@/lib/firebase';
 import { HISTORY_LOG_INTERVALS } from '@/constants/thresholds';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -64,10 +66,6 @@ export default function SettingsPage() {
     setBrowserNotificationsEnabled,
     temperatureUnit,
     setTemperatureUnit,
-    whatsappAlerts,
-    updateWhatsappAlerts,
-    emailAlerts,
-    updateEmailAlerts,
     clearHistory,
   } = useBMSStore(
     useShallow((state) => ({
@@ -81,10 +79,6 @@ export default function SettingsPage() {
       setBrowserNotificationsEnabled: state.setBrowserNotificationsEnabled,
       temperatureUnit: state.temperatureUnit,
       setTemperatureUnit: state.setTemperatureUnit,
-      whatsappAlerts: state.whatsappAlerts,
-      updateWhatsappAlerts: state.updateWhatsappAlerts,
-      emailAlerts: state.emailAlerts,
-      updateEmailAlerts: state.updateEmailAlerts,
       clearHistory: state.clearHistory,
     }))
   );
@@ -115,10 +109,22 @@ export default function SettingsPage() {
     }
   };
 
-  const handleClearHistory = () => {
-    if (confirm('Are you sure you want to clear all history data? This cannot be undone.')) {
+  const handleClearHistory = async () => {
+    const confirmed = window.confirm('Are you sure you want to clear all history data? This cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      // Clear from Firebase so the real-time listener doesn't re-populate
+      const historyRef = ref(database, 'scooter/history');
+      await remove(historyRef);
+      // Clear local Zustand state
       clearHistory();
-      toast.success('History cleared');
+      toast.success('History cleared successfully');
+    } catch (error) {
+      console.error('Failed to clear history from Firebase:', error);
+      // Still clear local state even if Firebase fails
+      clearHistory();
+      toast.error('History cleared locally, but failed to remove from server');
     }
   };
 
@@ -137,60 +143,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleTestWhatsApp = async () => {
-    if (!whatsappAlerts.phone || !whatsappAlerts.apikey) {
-      toast.error('Please enter Phone Number and CallMeBot API Key first');
-      return;
-    }
-    const cleanPhone = whatsappAlerts.phone.replace(/[\s\-()]/g, '');
-    toast.info(`Sending test message to ${cleanPhone}...`);
 
-    try {
-      const response = await fetch('/api/whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          apikey: whatsappAlerts.apikey,
-          message: '🔋 BMS Dashboard Test: Your WhatsApp notifications are working!',
-        }),
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success('Test message sent via CallMeBot!');
-      } else if (data.needsRegistration) {
-        toast.error('Phone not linked! Send "I allow callmebot to send me messages" to +34 644 71 98 98 on WhatsApp first.');
-      } else {
-        const rawError = typeof data.error === 'string' ? data.error : JSON.stringify(data.error || 'Unknown error');
-        const cleanError = rawError.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/g, ' ').trim();
-        toast.error(`Failed: ${cleanError}`);
-        console.error('WhatsApp test failed:', data);
-      }
-    } catch (error) {
-      toast.error('Network error sending test message');
-      console.error('WhatsApp test error:', error);
-    }
-  };
-
-  const handleTestEmail = async () => {
-    if (!emailAlerts.serviceId || !emailAlerts.templateId || !emailAlerts.publicKey || !emailAlerts.userEmail) {
-      toast.error('Please fill all EmailJS fields first');
-      return;
-    }
-    toast.info('Sending test Email...');
-    const { sendEmailAlert } = await import('@/utils/notifications');
-    const success = await sendEmailAlert(
-      emailAlerts.serviceId,
-      emailAlerts.templateId,
-      emailAlerts.publicKey,
-      emailAlerts.userEmail,
-      'BMS Dashboard Test',
-      'This is a test notification from your BMS Dashboard. Your EmailJS configuration is working perfectly!'
-    );
-    if (success) toast.success('Test email sent via EmailJS!');
-    else toast.error('Failed to send test email. Check your credentials.');
-  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -354,128 +307,7 @@ export default function SettingsPage() {
                     />
                   </div>
                 </div>
-                {/* WhatsApp configuration */}
-                <div className="pt-4 border-t border-border/50 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">WhatsApp Alerts (CallMeBot)</p>
-                      <p className="text-xs text-muted-foreground">
-                        Receive critical alerts directly to your WhatsApp
-                      </p>
-                    </div>
-                    <Switch
-                      checked={whatsappAlerts.enabled}
-                      onCheckedChange={(c) => updateWhatsappAlerts({ enabled: c })}
-                    />
-                  </div>
 
-                  {whatsappAlerts.enabled && (
-                    <div className="space-y-3 bg-muted/30 p-3 rounded-lg border border-border/50">
-                      <div className="p-2 rounded-md bg-amber-500/10 border border-amber-500/20">
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                          <strong>Setup:</strong> Save <strong>+34 644 71 98 98</strong> in your contacts → Send <em>&quot;I allow callmebot to send me messages&quot;</em> to that number on WhatsApp → You will receive your API key → Enter it below
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Phone Number (with country code)</Label>
-                          <Input
-                            value={whatsappAlerts.phone}
-                            onChange={(e) => updateWhatsappAlerts({ phone: e.target.value })}
-                            placeholder="+918122552210"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">CallMeBot API Key</Label>
-                          <Input
-                            value={whatsappAlerts.apikey}
-                            onChange={(e) => updateWhatsappAlerts({ apikey: e.target.value })}
-                            placeholder="API key from CallMeBot"
-                            type="password"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
-                        <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noreferrer" className="text-[10px] text-blue-500 hover:underline">
-                          How to get API Key?
-                        </a>
-                        <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleTestWhatsApp}>
-                          Test WhatsApp
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Email configuration */}
-                <div className="pt-4 border-t border-border/50 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Email Alerts (EmailJS)</p>
-                      <p className="text-xs text-muted-foreground">
-                        Receive critical alerts to your email inbox
-                      </p>
-                    </div>
-                    <Switch
-                      checked={emailAlerts.enabled}
-                      onCheckedChange={(c) => updateEmailAlerts({ enabled: c })}
-                    />
-                  </div>
-
-                  {emailAlerts.enabled && (
-                    <div className="space-y-3 bg-muted/30 p-3 rounded-lg border border-border/50">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Recipient Email</Label>
-                        <Input
-                          value={emailAlerts.userEmail}
-                          onChange={(e) => updateEmailAlerts({ userEmail: e.target.value })}
-                          placeholder="you@example.com"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Service ID</Label>
-                          <Input
-                            value={emailAlerts.serviceId}
-                            onChange={(e) => updateEmailAlerts({ serviceId: e.target.value })}
-                            placeholder="service_xxx"
-                            className="h-8 text-[11px]"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Template ID</Label>
-                          <Input
-                            value={emailAlerts.templateId}
-                            onChange={(e) => updateEmailAlerts({ templateId: e.target.value })}
-                            placeholder="template_xxx"
-                            className="h-8 text-[11px]"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Public Key</Label>
-                          <Input
-                            value={emailAlerts.publicKey}
-                            onChange={(e) => updateEmailAlerts({ publicKey: e.target.value })}
-                            placeholder="Public API Key"
-                            type="password"
-                            className="h-8 text-[11px]"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-1">
-                        <a href="https://www.emailjs.com/" target="_blank" rel="noreferrer" className="text-[10px] text-blue-500 hover:underline">
-                          Create Free EmailJS Account
-                        </a>
-                        <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleTestEmail}>
-                          Test Email
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
 

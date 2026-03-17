@@ -55,6 +55,8 @@ export async function sendEmailAlert(
             }
         };
 
+        console.log('[EmailJS] Sending with service:', serviceId, 'template:', templateId);
+
         const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: {
@@ -63,9 +65,14 @@ export async function sendEmailAlert(
             body: JSON.stringify(data),
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.warn('[EmailJS] Failed:', response.status, errorText);
+        }
+
         return response.ok;
     } catch (error) {
-        console.error('Failed to send Email alert via EmailJS:', error);
+        console.warn('[EmailJS] Error:', error);
         return false;
     }
 }

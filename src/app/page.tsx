@@ -24,6 +24,8 @@ import {
   Fuel,
   Sun,
   Moon,
+  Navigation,
+  Clock,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { SidebarNav } from '@/components/layout/SidebarNav';
@@ -543,6 +545,29 @@ export default function DashboardPage() {
                               )}
                             </Badge>
                           </motion.div>
+
+                          {liveData?.voltCondition && (
+                            <motion.div
+                              initial={{ scale: 0.9, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ delay: 0.2 }}
+                            >
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-xs font-medium px-3 py-1.5 transition-all duration-300',
+                                  liveData.voltCondition === 'FULL' && 'border-green-500/50 text-green-400 bg-green-500/10',
+                                  liveData.voltCondition === 'MED' && 'border-amber-500/50 text-amber-400 bg-amber-500/10',
+                                  liveData.voltCondition === 'LOW' && 'border-red-500/50 text-red-400 bg-red-500/10'
+                                )}
+                              >
+                                {liveData.voltCondition === 'FULL' && <Battery className="w-3 h-3 mr-1" />}
+                                {liveData.voltCondition === 'MED' && <Battery className="w-3 h-3 mr-1" />}
+                                {liveData.voltCondition === 'LOW' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                                {liveData.voltCondition}
+                              </Badge>
+                            </motion.div>
+                          )}
                         </div>
 
                         {/* Key Metrics Grid */}
@@ -682,6 +707,37 @@ export default function DashboardPage() {
                         calculations?.efficiencyLabel === 'Fair' ? '#F59E0B' : '#EF4444'
                     }
                     delay={0.3}
+                  />
+
+                  <MetricCard
+                    title="Range"
+                    value={liveData?.kmLeft ?? 0}
+                    unit="km"
+                    subtitle={liveData && (liveData.kmLeft ?? 0) < 2 ? 'Low range!' : 'Estimated'}
+                    icon={<Navigation className="w-4 h-4" />}
+                    color={(liveData?.kmLeft ?? 0) < 2 ? '#EF4444' : (liveData?.kmLeft ?? 0) < 5 ? '#F59E0B' : '#22C55E'}
+                    delay={0.35}
+                    trend={liveData && (liveData.kmLeft ?? 0) < 2 ? 'down' : undefined}
+                  />
+
+                  <MetricCard
+                    title="Energy Left"
+                    value={liveData?.energyLeftWh?.toFixed(1) ?? '0'}
+                    unit="Wh"
+                    subtitle="From ESP32"
+                    icon={<Power className="w-4 h-4" />}
+                    color="#3B82F6"
+                    delay={0.4}
+                  />
+
+                  <MetricCard
+                    title="Uptime"
+                    value={liveData?.uptimeSeconds ? `${Math.floor(liveData.uptimeSeconds / 60)}` : '0'}
+                    unit="min"
+                    subtitle="Device uptime"
+                    icon={<Clock className="w-4 h-4" />}
+                    color="#6366F1"
+                    delay={0.45}
                   />
                 </div>
               </section>
