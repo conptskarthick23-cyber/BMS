@@ -109,9 +109,9 @@ export default function AlertsPage() {
                     Active Alerts
                   </h2>
 
-                  {groupedAlerts.critical.map((alert) => (
+                  {groupedAlerts.critical.map((alert, index) => (
                     <AlertBanner
-                      key={alert.id}
+                      key={`${alert.id}-${index}`}
                       variant="critical"
                       title={alert.alertName}
                       message={`Value: ${typeof alert.value === 'number' ? alert.value.toFixed(2) : String(alert.value)} (threshold: ${typeof alert.threshold === 'number' ? alert.threshold.toFixed(2) : String(alert.threshold)})`}
@@ -120,9 +120,9 @@ export default function AlertsPage() {
                     />
                   ))}
 
-                  {groupedAlerts.warning.map((alert) => (
+                  {groupedAlerts.warning.map((alert, index) => (
                     <AlertBanner
-                      key={alert.id}
+                      key={`${alert.id}-${index}`}
                       variant="warning"
                       title={alert.alertName}
                       message={`Value: ${typeof alert.value === 'number' ? alert.value.toFixed(2) : String(alert.value)} (threshold: ${typeof alert.threshold === 'number' ? alert.threshold.toFixed(2) : String(alert.threshold)})`}
@@ -265,9 +265,9 @@ export default function AlertsPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {filteredHistory.slice(0, 20).map((alert) => (
+                      {filteredHistory.slice(0, 20).map((alert, index) => (
                         <div
-                          key={alert.id}
+                          key={`${alert.id}-${index}`}
                           className={cn(
                             'flex items-center gap-3 p-3 rounded-lg border',
                             alert.level === 'critical' && 'bg-red-500/5 border-red-500/20',
