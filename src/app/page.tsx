@@ -721,24 +721,15 @@ export default function DashboardPage() {
                   />
 
                   <MetricCard
-                    title="Energy Left"
-                    value={liveData?.energyLeftWh?.toFixed(1) ?? '0'}
-                    unit="Wh"
-                    subtitle="From ESP32"
-                    icon={<Power className="w-4 h-4" />}
-                    color="#3B82F6"
-                    delay={0.4}
-                  />
-
-                  <MetricCard
                     title="Uptime"
                     value={liveData?.uptimeSeconds ? `${Math.floor(liveData.uptimeSeconds / 60)}` : '0'}
                     unit="min"
                     subtitle="Device uptime"
                     icon={<Clock className="w-4 h-4" />}
                     color="#6366F1"
-                    delay={0.45}
+                    delay={0.4}
                   />
+
                 </div>
               </section>
 
