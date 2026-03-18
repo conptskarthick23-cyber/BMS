@@ -55,6 +55,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileData>(defaultProfile);
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof ProfileData, string>>>({});
 
   useEffect(() => {
     try {
@@ -69,9 +70,41 @@ export default function LoginPage() {
 
   const handleChange = (field: keyof ProfileData, value: string) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const fieldLabels: Record<keyof ProfileData, string> = {
+    name: 'Name',
+    phone: 'Phone Number',
+    email: 'Email',
+    firebaseApiKey: 'Firebase API Key',
+    firebaseUrl: 'Firebase URL',
+    firebaseAccountName: 'Firebase Account Name',
+    firebasePassword: 'Firebase Password',
   };
 
   const handleLogin = () => {
+    // Validate all fields
+    const newErrors: Partial<Record<keyof ProfileData, string>> = {};
+    (Object.keys(profile) as (keyof ProfileData)[]).forEach((field) => {
+      if (!profile[field].trim()) {
+        newErrors[field] = `${fieldLabels[field]} is required`;
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('Please fill in all fields before logging in');
+      return;
+    }
+
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
     toast.success('Logged in successfully!');
     router.push('/profile');
@@ -122,7 +155,9 @@ export default function LoginPage() {
                   placeholder="Enter your full name"
                   value={profile.name}
                   onChange={(e) => handleChange('name', e.target.value)}
+                  className={errors.name ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-xs flex items-center gap-1.5">
@@ -134,7 +169,9 @@ export default function LoginPage() {
                   placeholder="Enter your phone number"
                   value={profile.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
+                  className={errors.phone ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs flex items-center gap-1.5">
@@ -146,7 +183,9 @@ export default function LoginPage() {
                   placeholder="Enter your email address"
                   value={profile.email}
                   onChange={(e) => handleChange('email', e.target.value)}
+                  className={errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
               </div>
             </div>
 
@@ -168,7 +207,9 @@ export default function LoginPage() {
                   placeholder="Enter your Firebase API key"
                   value={profile.firebaseApiKey}
                   onChange={(e) => handleChange('firebaseApiKey', e.target.value)}
+                  className={errors.firebaseApiKey ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {errors.firebaseApiKey && <p className="text-xs text-red-500">{errors.firebaseApiKey}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="firebaseUrl" className="text-xs flex items-center gap-1.5">
@@ -180,7 +221,9 @@ export default function LoginPage() {
                   placeholder="https://your-project.firebaseio.com"
                   value={profile.firebaseUrl}
                   onChange={(e) => handleChange('firebaseUrl', e.target.value)}
+                  className={errors.firebaseUrl ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {errors.firebaseUrl && <p className="text-xs text-red-500">{errors.firebaseUrl}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="firebaseAccountName" className="text-xs flex items-center gap-1.5">
@@ -191,7 +234,9 @@ export default function LoginPage() {
                   placeholder="Enter your Firebase account name"
                   value={profile.firebaseAccountName}
                   onChange={(e) => handleChange('firebaseAccountName', e.target.value)}
+                  className={errors.firebaseAccountName ? 'border-red-500 focus-visible:ring-red-500' : ''}
                 />
+                {errors.firebaseAccountName && <p className="text-xs text-red-500">{errors.firebaseAccountName}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="firebasePassword" className="text-xs flex items-center gap-1.5">
@@ -204,7 +249,7 @@ export default function LoginPage() {
                     placeholder="Enter your Firebase password"
                     value={profile.firebasePassword}
                     onChange={(e) => handleChange('firebasePassword', e.target.value)}
-                    className="pr-10"
+                    className={`pr-10 ${errors.firebasePassword ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   />
                   <button
                     type="button"
@@ -214,6 +259,7 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {errors.firebasePassword && <p className="text-xs text-red-500">{errors.firebasePassword}</p>}
               </div>
             </div>
 
